@@ -1,0 +1,7 @@
+.highlight, .highlight-word {
+  background: yellow !important;
+  color: red !important;
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: bold;
+}
