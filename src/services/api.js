@@ -190,6 +190,35 @@ const apiService = {
         throw error;
       });
   },
+
+  getVideoLearningSegments(videoId) {
+    return apiClient.get(`/api/videos/${videoId}/learning/segments`);
+  },
+
+  getVideoSegmentSummary(videoId, segmentId, force = false) {
+    const query = force ? '?force=1' : '';
+    return apiClient.get(`/api/videos/${videoId}/learning/segments/${encodeURIComponent(segmentId)}/summary${query}`);
+  },
+
+  getVideoSegmentCaptions(videoId, segmentId) {
+    return apiClient.get(`/api/videos/${videoId}/learning/segments/${encodeURIComponent(segmentId)}/captions`);
+  },
+
+  getVideoSegmentWords(videoId, segmentId) {
+    return apiClient.get(`/api/videos/${videoId}/learning/segments/${encodeURIComponent(segmentId)}/words`);
+  },
+
+  getVideoWords(videoId, segmentId = '') {
+    const query = segmentId ? `?segment_id=${encodeURIComponent(segmentId)}` : '';
+    return apiClient.get(`/api/videos/${videoId}/video-words${query}`);
+  },
+
+  updateVideoSegmentProgress(videoId, segmentId, action, payload = {}) {
+    return apiClient.post(`/api/videos/${videoId}/learning/segments/${encodeURIComponent(segmentId)}/progress`, {
+      action,
+      ...payload
+    });
+  },
   
   // Word book related endpoints
   addCategory(data) {
@@ -257,8 +286,13 @@ const apiService = {
     return apiClient.post(API_ENDPOINTS.STORY.LIST, storyData);
   },
   
-  getStories() {
-    return apiClient.get(API_ENDPOINTS.STORY.LIST);
+  getStories(params = {}) {
+    const query = new URLSearchParams();
+    if (params.source_video_id) {
+      query.append('source_video_id', String(params.source_video_id));
+    }
+    const suffix = query.toString();
+    return apiClient.get(`${API_ENDPOINTS.STORY.LIST}${suffix ? `?${suffix}` : ''}`);
   },
   
   getStory(storyId) {
@@ -683,7 +717,7 @@ const apiService = {
   addUserWord(wordText, translation = null, categoryId = null) {
     console.log('添加用户单词:', wordText, '翻译:', translation);
     return apiClient.post(API_ENDPOINTS.USER.WORDS, {
-      word_text: wordText,
+      text: wordText,
       translation,
       category_id: categoryId
     });

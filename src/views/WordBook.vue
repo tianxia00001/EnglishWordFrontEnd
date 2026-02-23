@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="word-book-container">
     <h1>单词本管理</h1>
     
@@ -34,13 +34,13 @@
         <el-col :xs="24" :sm="12" :md="6">
           <div class="performance-item">
             <div class="performance-value">{{ performanceStats.base_library_size || 0 }}</div>
-            <div class="performance-label">本地词库大小</div>
+            <div class="performance-label">词库词条总量</div>
           </div>
         </el-col>
         <el-col :xs="24" :sm="12" :md="6">
           <div class="performance-item">
             <div class="performance-value success">{{ performanceStats.estimated_hit_rate || 0 }}%</div>
-            <div class="performance-label">预估命中率</div>
+            <div class="performance-label">预计命中率</div>
           </div>
         </el-col>
         <el-col :xs="24" :sm="12" :md="6">
@@ -52,7 +52,7 @@
         <el-col :xs="24" :sm="12" :md="6">
           <div class="performance-item">
             <div class="performance-value warning">{{ performanceStats.api_savings || '0%' }}</div>
-            <div class="performance-label">API节约</div>
+            <div class="performance-label">API节省率</div>
           </div>
         </el-col>
       </el-row>
@@ -122,18 +122,18 @@
             </div>
           </template>
           
-          <!-- 单词本为空时的提示 -->
+          <!-- 单词为空时的提示 -->
           <div v-if="authStore.isAuthenticated && words.length === 0 && !userDataStore.isLoading" class="empty-state">
-            <el-empty description="您的单词本还是空的">
+            <el-empty description="你的单词本还是空的">
               <el-button type="primary" @click="loadSampleWords" :loading="loadingSampleWords">
                 <el-icon><Plus /></el-icon>
                 加载示例单词
               </el-button>
               <p class="empty-tip">
-                您也可以通过以下方式添加单词：<br>
-                • 在视频学习中点击字幕中的单词<br>
-                • 在基础词汇页面收藏单词<br>
-                • 手动添加自定义单词
+                你也可以通过以下方式添加单词：<br>
+                1. 在视频学习中点击字幕里的单词<br>
+                2. 在基础词库页面收藏单词<br>
+                3. 手动添加自定义单词
               </p>
             </el-empty>
           </div>
@@ -171,8 +171,10 @@
           
           <el-table
             v-if="words.length > 0"
+            ref="wordTableRef"
             :data="pagedWords"
             style="width: 100%"
+            row-key="id"
             @selection-change="handleSelectionChange"
           >
             <el-table-column
@@ -214,6 +216,16 @@
               min-width="150"
               show-overflow-tooltip
             />
+            <el-table-column
+              label="记忆状态"
+              width="110"
+            >
+              <template #default="scope">
+                <el-tag v-if="scope.row.is_learned === true" type="success" size="small">记住了</el-tag>
+                <el-tag v-else-if="scope.row.is_learned === false" type="warning" size="small">没记住</el-tag>
+                <el-tag v-else type="info" size="small">未标记</el-tag>
+              </template>
+            </el-table-column>
             <el-table-column
               prop="addedDate"
               label="添加日期"
@@ -276,7 +288,7 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="addCategoryDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="addCategory">确认</el-button>
+          <el-button type="primary" @click="addCategory">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -302,7 +314,7 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="moveCategoryDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="moveToCategory">确认</el-button>
+          <el-button type="primary" @click="moveToCategory">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -318,7 +330,7 @@
           <el-input v-model="editingWord.word" />
         </el-form-item>
         <el-form-item label="音标">
-          <el-input v-model="editingWord.phonetic" placeholder="如: /ˈbjuːtɪfəl/" />
+          <el-input v-model="editingWord.phonetic" placeholder="例如 /əˈbjuːtəfəl/" />
         </el-form-item>
         <el-form-item label="词性">
           <el-select v-model="editingWord.partOfSpeech" placeholder="请选择词性" clearable>
@@ -350,7 +362,7 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="editWordDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveEditWord">确认</el-button>
+          <el-button type="primary" @click="saveEditWord">确定</el-button>
           <el-button 
             type="info" 
             @click="refreshWordInfo" 
@@ -385,6 +397,7 @@ export default {
     const router = useRouter()
     const authStore = useAuthStore()
     const userDataStore = useUserDataStore()
+    const wordTableRef = ref(null)
     
     const words = ref([])
     const categories = ref([])
@@ -520,13 +533,13 @@ export default {
           await userDataStore.fetchUserWords()
           wordsData = userDataStore.userWords
         } else {
-          // 未登录用户：使用apiService获取公共单词数据
-          console.log('🔍 未登录用户，获取公共单词数据')
+          // 未登录用户：获取公共单词数据
+          console.log('未登录用户，获取公共单词数据')
           const response = await apiService.getWords()
           
-          console.log('公共单词API响应:', response)
+          console.log('公共单词 API 响应:', response)
           
-          // 处理各种可能的响应格式（考虑到响应拦截器的处理）
+          // 兼容多种响应格式
           if (Array.isArray(response)) {
             wordsData = response
           } else if (response && response.words && Array.isArray(response.words)) {
@@ -542,8 +555,8 @@ export default {
           }
         }
         
-        // 处理数据格式
-        words.value = wordsData.map(item => ({
+        // 统一数据格式
+        const normalizedWords = wordsData.map(item => ({
           ...item,
           id: item.id || item.word_id,
           word: item.word || item.text,
@@ -551,24 +564,29 @@ export default {
           phonetic: item.phonetic || item.pronunciation || '',
           part_of_speech: item.part_of_speech || item.partOfSpeech || '',
           categoryId: item.categoryId || item.category_id || null,
-          addedDate: item.addedDate || item.created_at || new Date().toISOString()
+          addedDate: item.addedDate || item.created_at || new Date().toISOString(),
+          lastUpdated: item.last_updated || item.lastUpdated || item.updated_at || item.created_at || null,
+          is_learned: typeof item.is_learned === 'boolean' ? item.is_learned : null,
+          learned_at: item.learned_at || null,
+          is_personal: item.is_personal === true || item.isPersonal === true
         }))
+        words.value = dedupeWordsForDisplay(normalizedWords)
         
         loading.close()
         ElMessage.success(`成功加载 ${words.value.length} 个单词`)
         
       } catch (error) {
         loading.close()
-        console.error('❌ 获取单词数据失败:', error)
+        console.error('获取单词数据失败:', error)
         
-        // 提供更详细的错误信息
+        // 提供更详细错误信息
         let errorMessage = '获取单词数据失败'
         if (error.response) {
           errorMessage += `: HTTP ${error.response.status}`
           if (error.response.status === 401) {
             errorMessage += ' - 身份验证失败，请重新登录'
           } else if (error.response.status === 404) {
-            errorMessage += ' - API接口不存在，请检查后端服务'
+            errorMessage += ' - API 接口不存在，请检查后端服务'
           } else if (error.response.status === 500) {
             errorMessage += ' - 服务器内部错误'
           }
@@ -584,8 +602,7 @@ export default {
     const fetchCategories = async () => {
       try {
         if (authStore.isAuthenticated) {
-          // 登录用户：获取个人分类
-          // 这里可以调用userDataStore的方法获取分类
+          // 登录用户：可扩展个人分类
           categories.value = []
         } else {
           // 未登录用户：获取公共分类
@@ -606,7 +623,7 @@ export default {
       }
     }
     
-    // 事件处理方法
+    // 事件处理
     const handleCategorySelect = (key) => {
       activeCategory.value = key
     }
@@ -620,10 +637,17 @@ export default {
     }
     
     const selectAllWords = () => {
-      selectedWords.value = [...pagedWords.value]
+      if (!wordTableRef.value) {
+        selectedWords.value = [...pagedWords.value]
+        return
+      }
+
+      wordTableRef.value.clearSelection()
+      pagedWords.value.forEach(row => wordTableRef.value.toggleRowSelection(row, true))
     }
     
     const deselectAllWords = () => {
+      wordTableRef.value?.clearSelection()
       selectedWords.value = []
     }
     
@@ -641,7 +665,6 @@ export default {
       }
       
       try {
-        // 这里应该调用API添加分类
         ElMessage.success('分类添加成功')
         addCategoryDialogVisible.value = false
         fetchCategories()
@@ -668,7 +691,6 @@ export default {
       }
       
       try {
-        // 这里应该调用API移动单词到指定分类
         ElMessage.success('单词移动成功')
         moveCategoryDialogVisible.value = false
         fetchWords()
@@ -690,10 +712,9 @@ export default {
       editWordDialogVisible.value = true
     }
     
-    // 保存编辑的单词
+    // 保存编辑
     const saveEditWord = async () => {
       try {
-        // 这里应该调用API保存编辑的单词
         ElMessage.success('单词编辑成功')
         editWordDialogVisible.value = false
         fetchWords()
@@ -710,11 +731,22 @@ export default {
           cancelButtonText: '取消',
           type: 'warning'
         })
-        
-        // 这里应该调用API删除单词
-        console.log('删除单词:', word)
-        ElMessage.success('单词删除成功')
-        fetchWords()
+
+        const loading = ElLoading.service({
+          fullscreen: true,
+          text: '正在删除单词...'
+        })
+
+        try {
+          const response = await apiService.deleteUserWord(word.id)
+          if (response?.success === false) {
+            throw new Error(response?.message || '删除失败')
+          }
+          ElMessage.success('单词删除成功')
+          await fetchWords()
+        } finally {
+          loading.close()
+        }
       } catch (error) {
         if (error !== 'cancel') {
           ElMessage.error('删除单词失败')
@@ -722,7 +754,7 @@ export default {
       }
     }
     
-    // 删除选中的单词
+    // 批量删除单词
     const deleteSelectedWords = async () => {
       if (selectedWords.value.length === 0) {
         ElMessage.warning('请先选择要删除的单词')
@@ -735,11 +767,43 @@ export default {
           cancelButtonText: '取消',
           type: 'warning'
         })
-        
-        // 这里应该调用API批量删除单词
-        ElMessage.success('选中单词删除成功')
-        selectedWords.value = []
-        fetchWords()
+
+        const wordIds = Array.from(
+          new Set(
+            selectedWords.value
+              .map(item => item?.id)
+              .filter(id => id !== undefined && id !== null && id !== '')
+          )
+        )
+
+        if (wordIds.length === 0) {
+          ElMessage.error('选中的单词缺少 ID，无法删除')
+          return
+        }
+
+        const loading = ElLoading.service({
+          fullscreen: true,
+          text: `正在删除 ${wordIds.length} 个单词...`
+        })
+
+        try {
+          const results = await Promise.allSettled(wordIds.map(id => apiService.deleteUserWord(id)))
+          const successCount = results.filter(r => r.status === 'fulfilled').length
+          const failCount = results.length - successCount
+
+          if (successCount > 0) {
+            ElMessage.success(`已删除 ${successCount} 个单词`)
+          }
+          if (failCount > 0) {
+            ElMessage.error(`${failCount} 个单词删除失败`)
+          }
+
+          wordTableRef.value?.clearSelection()
+          selectedWords.value = []
+          await fetchWords()
+        } finally {
+          loading.close()
+        }
       } catch (error) {
         if (error !== 'cancel') {
           ElMessage.error('删除选中单词失败')
@@ -754,16 +818,16 @@ export default {
         return
       }
       
-      // 跳转到故事生成页面，传递选中的单词
+      // 跳转到故事生成页，传递选中的单词
       const wordList = selectedWords.value.map(word => word.word).join(',')
-      router.push(`/story-generator?words=${encodeURIComponent(wordList)}`)
+      router.push('/story-generator?words=' + encodeURIComponent(wordList))
     }
     
     // 刷新单词信息
     const refreshWordInfo = async () => {
       refreshingWordInfo.value = true
       try {
-        // 这里应该调用API刷新单词信息
+        // 调用 API 刷新单词信息
         ElMessage.success('单词信息已刷新')
       } catch (error) {
         ElMessage.error('刷新单词信息失败')
@@ -801,6 +865,42 @@ export default {
       }
       return map[partOfSpeech] || partOfSpeech
     }
+
+    const toTimeValue = (value) => {
+      if (!value) return 0
+      const ts = new Date(value).getTime()
+      return Number.isFinite(ts) ? ts : 0
+    }
+
+    const dedupeWordsForDisplay = (rows) => {
+      const byWord = new Map()
+      for (const row of rows || []) {
+        const key = String(row.word || '').trim().toLowerCase()
+        if (!key) continue
+
+        const existing = byWord.get(key)
+        if (!existing) {
+          byWord.set(key, row)
+          continue
+        }
+
+        const currentPersonal = row.is_personal === true
+        const existingPersonal = existing.is_personal === true
+        if (currentPersonal !== existingPersonal) {
+          if (currentPersonal) {
+            byWord.set(key, row)
+          }
+          continue
+        }
+
+        const currentTs = toTimeValue(row.lastUpdated || row.addedDate)
+        const existingTs = toTimeValue(existing.lastUpdated || existing.addedDate)
+        if (currentTs >= existingTs) {
+          byWord.set(key, row)
+        }
+      }
+      return [...byWord.values()]
+    }
     
     const formatDate = (dateString) => {
       if (!dateString) return '-'
@@ -820,6 +920,7 @@ export default {
       activeCategory,
       searchQuery,
       selectedWords,
+      wordTableRef,
       currentPage,
       pageSize,
       performanceStats,
@@ -982,3 +1083,5 @@ export default {
   }
 }
 </style> 
+
+

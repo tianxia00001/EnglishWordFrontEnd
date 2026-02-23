@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="header-container">
     <el-menu
       :default-active="activeIndex"
@@ -10,37 +10,30 @@
     >
       <div class="logo">英语学习助手</div>
       <el-menu-item index="/">首页</el-menu-item>
+      <el-menu-item index="/jobs">并行处理</el-menu-item>
       <el-menu-item index="/video-subtitles">视频字幕</el-menu-item>
       <el-menu-item index="/video-history">视频历史</el-menu-item>
       <el-menu-item index="/word-book">单词本</el-menu-item>
       <el-menu-item index="/basic-vocabulary">基础词库</el-menu-item>
       <el-menu-item index="/story-generator">故事生成</el-menu-item>
       <el-menu-item index="/permission-test">权限测试</el-menu-item>
-      
-      <!-- 用户相关菜单 -->
+
       <div class="user-menu">
         <template v-if="!authStore.isAuthenticated">
-          <el-button type="primary" size="small" @click="$router.push('/login')">
-            登录/注册
-          </el-button>
+          <el-button type="primary" size="small" @click="$router.push('/login')">登录/注册</el-button>
         </template>
         <template v-else>
-          <!-- 会员状态显示 -->
           <div class="user-info">
-            <el-tag 
-              :type="authStore.isVip ? 'warning' : 'info'"
-              size="small"
-            >
+            <el-tag :type="authStore.isVip ? 'warning' : 'info'" size="small">
               {{ authStore.isVip ? 'VIP会员' : '免费用户' }}
             </el-tag>
             <span class="username">{{ authStore.user?.phone || '用户' }}</span>
           </div>
-          
-          <!-- 用户下拉菜单 -->
-          <el-dropdown @command="handleCommand" class="user-dropdown">
+
+          <el-dropdown class="user-dropdown" @command="handleCommand">
             <span class="el-dropdown-link">
               <el-icon><User /></el-icon>
-              <el-icon class="el-icon--right"><arrow-down /></el-icon>
+              <el-icon class="el-icon--right"><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
@@ -59,9 +52,10 @@
 <script>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '../../stores/authStore'
-import { User, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { ArrowDown, User } from '@element-plus/icons-vue'
+
+import { useAuthStore } from '../../stores/authStore'
 
 export default {
   name: 'AppHeader',
@@ -73,28 +67,26 @@ export default {
     const route = useRoute()
     const router = useRouter()
     const authStore = useAuthStore()
-    
-    const activeIndex = computed(() => {
-      return route.path
-    })
 
-    const handleCommand = async (command) => {
-      switch (command) {
-        case 'user-center':
-          router.push('/user-center')
-          break
-        case 'membership':
-          router.push('/membership')
-          break
-        case 'logout':
-          try {
-            await authStore.logout()
-            ElMessage.success('退出登录成功')
-            router.push('/')
-          } catch (error) {
-            ElMessage.error('退出登录失败')
-          }
-          break
+    const activeIndex = computed(() => route.path)
+
+    const handleCommand = async command => {
+      if (command === 'user-center') {
+        router.push('/user-center')
+        return
+      }
+      if (command === 'membership') {
+        router.push('/membership')
+        return
+      }
+      if (command === 'logout') {
+        try {
+          await authStore.logout()
+          ElMessage.success('退出登录成功')
+          router.push('/')
+        } catch (error) {
+          ElMessage.error('退出登录失败')
+        }
       }
     }
 

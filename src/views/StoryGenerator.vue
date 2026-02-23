@@ -99,11 +99,11 @@
       <div class="story-content">
         <div v-if="showEnglishStory" class="english-story">
           <h3>English Story</h3>
-          <p v-html="story.highlightedEnglishText"></p>
+          <p v-html="getStoryContentHtml(story, 'en')"></p>
         </div>
         <div v-if="showChineseStory" class="chinese-story">
           <h3>中文故事</h3>
-          <p>{{ story.chineseText }}</p>
+          <p v-html="getStoryContentHtml(story, 'zh')"></p>
         </div>
       </div>
     </el-card>
@@ -124,6 +124,9 @@
           :timestamp="item.created_at ? item.created_at : ''"
         >
           <div style="font-weight:bold">{{ item.title }}</div>
+          <div style="margin-top: 6px;">
+            <el-tag v-if="item.source_video_id" size="small" type="warning">关联视频</el-tag>
+          </div>
           <div style="margin: 6px 0; color: #666; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             {{ item.englishText || item.english_text }}
           </div>
@@ -134,13 +137,19 @@
         <el-dialog v-model="storyDetailDialogVisible" title="故事详情" width="40%">
           <div v-if="currentStoryDetail">
             <div style="margin-bottom: 12px; font-weight: bold;">{{ currentStoryDetail.title }}</div>
+            <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+              <el-tag v-if="currentStoryDetail.source_video_id" size="small" type="warning">关联视频</el-tag>
+              <span v-if="currentStoryDetail.source_video_filename" style="color: #666; font-size: 12px;">
+                {{ currentStoryDetail.source_video_filename }}
+              </span>
+            </div>
             <div style="margin-bottom: 8px; color: #333;">
               <span style="font-weight:bold">英文原文：</span>
-              <div style="white-space: pre-line;" v-html="currentStoryDetail.highlightedEnglishText"></div>
+              <div style="white-space: pre-line;" v-html="getStoryContentHtml(currentStoryDetail, 'en')"></div>
             </div>
             <div style="margin-top: 12px; color: #333;">
               <span style="font-weight:bold">中文翻译：</span>
-              <div style="white-space: pre-line;">{{ currentStoryDetail.chineseText || currentStoryDetail.chinese_text }}</div>
+              <div style="white-space: pre-line;" v-html="getStoryContentHtml(currentStoryDetail, 'zh')"></div>
             </div>
           </div>
           <template #footer>
@@ -172,11 +181,11 @@
       <div class="story-content">
         <div v-if="showEnglishStory" class="english-story">
           <h3>English Story</h3>
-          <p v-html="story.highlightedEnglishText"></p>
+          <p v-html="getStoryContentHtml(story, 'en')"></p>
         </div>
         <div v-if="showChineseStory" class="chinese-story">
           <h3>中文故事</h3>
-          <p>{{ story.chineseText }}</p>
+          <p v-html="getStoryContentHtml(story, 'zh')"></p>
         </div>
       </div>
     </el-card>
@@ -252,6 +261,112 @@ export default {
     
     const getWordTranslation = (word) => {
       return word.translation || ''
+    }
+
+    const escapeHtml = (raw) => {
+      return String(raw || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    }
+
+    const escapeRegExp = (text) => {
+      return String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    }
+
+    const extractChineseTerms = (text) => {
+      const raw = String(text || '').trim()
+      if (!raw) return []
+
+      const normalized = raw
+        .replace(/\[[^\]]*]/g, ' ')
+        .replace(/\([^)]*\)/g, ' ')
+        .replace(/[A-Za-z]+\./g, ' ')
+
+      const chunks = normalized.match(/[\u4e00-\u9fff]{2,16}/g) || []
+      const terms = []
+      chunks.forEach((chunk) => {
+        const value = chunk.trim()
+        if (value.length >= 2) {
+          terms.push(value)
+        }
+        value.split(/[的了和与及并将把]/g).forEach((part) => {
+          const item = part.trim()
+          if (item.length >= 2) {
+            terms.push(item)
+          }
+        })
+      })
+
+      return [...new Set(terms)]
+    }
+
+    const replaceMarkedWords = (text, highlight = false) => {
+      return text.replace(/\*\*([^*]+)\*\*|\*([^*]+)\*/g, (_match, p1, p2) => {
+        const word = p1 || p2 || ''
+        if (!highlight) return word
+        return `<span class="selected-word-highlight">${word}</span>`
+      })
+    }
+
+    const resolveStoryWords = (storyData) => {
+      if (Array.isArray(storyData?.words) && storyData.words.length > 0) {
+        return storyData.words
+      }
+      return selectedWords.value.map((word) => ({
+        text: getWordText(word),
+        translation: getWordTranslation(word)
+      }))
+    }
+
+    const highlightByTerms = (text, terms, useWordBoundary = false) => {
+      let highlighted = text
+      const normalized = [...new Set((terms || []).map(item => String(item || '').trim()).filter(Boolean))]
+        .sort((a, b) => b.length - a.length)
+
+      normalized.forEach((term) => {
+        const escaped = escapeRegExp(term)
+        const pattern = useWordBoundary ? `\\b${escaped}\\b` : escaped
+        const reg = new RegExp(pattern, useWordBoundary ? 'gi' : 'g')
+        highlighted = highlighted.replace(reg, '<span class="selected-word-highlight">$&</span>')
+      })
+
+      return highlighted
+    }
+
+    const getStoryContentHtml = (storyData, language = 'en') => {
+      if (language === 'en') {
+        const highlightedEnglish = String(storyData?.highlightedEnglishText || '').trim()
+        if (highlightedEnglish) {
+          const normalized = replaceMarkedWords(
+            highlightedEnglish
+            .replace(/class="highlight-word"/g, 'class="selected-word-highlight"')
+            .replace(/class="highlight"/g, 'class="selected-word-highlight"')
+          )
+          return normalized
+            .replace(/\n/g, '<br>')
+        }
+      }
+
+      const rawText = language === 'zh'
+        ? (storyData?.chineseText || storyData?.chinese_text || '')
+        : (storyData?.englishText || storyData?.english_text || '')
+
+      const safeText = escapeHtml(rawText)
+      const hasMarkers = /\*\*[^*]+\*\*|\*[^*]+\*/.test(rawText)
+      let highlighted = replaceMarkedWords(safeText, language === 'zh' && hasMarkers)
+
+      if (!(language === 'zh' && hasMarkers)) {
+        const storyWords = resolveStoryWords(storyData)
+        const terms = language === 'zh'
+          ? storyWords.flatMap((item) => extractChineseTerms(item.translation))
+          : storyWords.map((item) => item.text)
+        highlighted = highlightByTerms(highlighted, terms, language === 'en')
+      }
+
+      return highlighted.replace(/\n/g, '<br>')
     }
     
     // 计算属性
@@ -523,6 +638,7 @@ export default {
       getWordTranslation,
       fetchStories,
       showStoryDetail,
+      getStoryContentHtml,
       highlightWordsByIds,
       generateStory,
       highlightWords,
@@ -539,6 +655,23 @@ export default {
   color: #d48806;
   font-weight: bold;
   border-radius: 3px;
+  padding: 0 2px;
+}
+
+:deep(.selected-word-highlight) {
+  background: #fff2cc;
+  color: #ad6800;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+:deep(.highlight),
+:deep(.highlight-word) {
+  background: #fff2cc;
+  color: #ad6800;
+  font-weight: 600;
+  border-radius: 4px;
   padding: 0 2px;
 }
 </style>

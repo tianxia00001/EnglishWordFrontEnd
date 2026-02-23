@@ -1,11 +1,11 @@
-const { defineConfig } = require('@vue/cli-service')
+﻿const { defineConfig } = require('@vue/cli-service')
 
 module.exports = defineConfig({
   transpileDependencies: true,
   devServer: {
     proxy: {
       '/api': {
-        target: 'http://172.16.0.132:5000',
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         ws: true,
         // Fix for large file uploads
@@ -43,3 +43,5 @@ module.exports = defineConfig({
   // Disable source maps in production for better performance
   productionSourceMap: process.env.NODE_ENV !== 'production'
 })
+
+

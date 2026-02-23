@@ -31,10 +31,55 @@ const routes = [
     component: () => import('../views/VideoSubtitles.vue')
   },
   {
+    path: '/jobs',
+    name: 'JobDashboard',
+    component: () => import('../views/JobDashboard.vue')
+  },
+  {
+    path: '/jobs/:jobId/live',
+    name: 'JobLiveStudy',
+    component: () => import('../views/LiveStudyView.vue'),
+    props: true
+  },
+  {
+    path: '/jobs/:jobId/segments-live',
+    name: 'JobSegmentsLiveStudy',
+    component: () => import('../views/ParallelSegmentStudyView.vue'),
+    props: true
+  },
+  {
     path: '/video-history',
     name: 'VideoHistory',
     component: () => import('../views/VideoHistory.vue'),
     meta: { title: '视频历史' }
+  },
+  {
+    path: '/videos/:videoId/transcript',
+    name: 'VideoTranscript',
+    component: () => import('../views/VideoTranscriptView.vue'),
+    props: true,
+    meta: { title: 'Video Transcript' }
+  },
+  {
+    path: '/videos/:videoId/stories',
+    name: 'VideoStory',
+    component: () => import('../views/VideoStoryView.vue'),
+    props: true,
+    meta: { title: '视频故事' }
+  },
+  {
+    path: '/videos/:videoId/words',
+    name: 'VideoWords',
+    component: () => import('../views/VideoWordsView.vue'),
+    props: true,
+    meta: { title: '视频单词' }
+  },
+  {
+    path: '/videos/:videoId/segment-learning',
+    name: 'VideoSegmentLearning',
+    component: () => import('../views/VideoSegmentLearningView.vue'),
+    props: true,
+    meta: { title: '视频学习' }
   },
   {
     path: '/word-book',
